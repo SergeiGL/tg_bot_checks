@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    shm_size: 128mb
+    environment:
+      # Create a database named checks_ICEF
+      POSTGRES_DB: checks_ICEF
+      POSTGRES_USER: sergei
+      POSTGRES_PASSWORD: XXXXX
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sergei -d checks_ICEF"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  bot:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  # A named volume that holds Postgres data. By default, named volumes persist
+  # until you explicitly remove them (e.g. via `docker volume rm`), so this
+  # storage will survive container restarts/stops.
+  db_data:

@@ -1,0 +1,16 @@
+requests
+python-telegram-bot[rate-limiter]
+fake_useragent
+asyncio
+psycopg[binary]
+beautifulsoup4
+apscheduler
+lxml
+tabulate
+plotly
+kaleido
+aiohttp
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+gspread
