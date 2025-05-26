@@ -2,19 +2,19 @@
 
 ## How It Works
 
-1. Users start a chat with your bot
-2. Bot prompts them to send a transaction confirmation picture
-3. When any image is received:
-    
+1. Users start a chat (/start)
     1. The username of a sender is in the Google Sheet
-        - Image is forwarded to the specified admin account
-        - Image is saved at a PostgreSQL database
-        - The user's name is highlighted green in the Google Sheet
-        - User receives a confirmation message and a view-only link to the Google Sheet (with his row number) to check that his username is indeed turned green.
+        - Bot sends the payment sum (depends on how early the user started the bot) and prompts for a transaction confirmation screenshot
     2. The username of a sender is NOT in the Google Sheet
-        - The image sent is NOT forwarded to the specified admin account
-        - The image sent is NOT saved at a PostgreSQL database
         - User is prompted that he is not in the Google Sheet
+2. When any image is received:
+   1. The username of a sender is in the Google Sheet
+      - Image is forwarded to the specified admin account with user's position, payment sum and username
+      - Image is saved at a PostgreSQL database (see `example_db.png`)
+      - The user's name is highlighted green in the Google Sheet
+      - User receives a confirmation message and a view-only link to the Google Sheet (with his row number) to check that his username is indeed turned green.
+   2. The username of a sender is NOT in the Google Sheet
+      - User is prompted that he is not in the Google Sheet
 
 ## Prerequisites
 
@@ -26,6 +26,7 @@
 ## Setup Instructions
 
 ### Google Sheets Setup
+
 1. Use @BotFather to setup a Telegram Bot
 2. Create a Google Sheet with usernames in column A (see `example_google_sheet.png`)
 3. Set up Google Cloud Platform and the Google Sheets API:
@@ -37,45 +38,54 @@
 Create a `config.py` file with the following content:
 
 ```python
-# Telegram Configuration
-telegram_bot_token = ""  # Your main bot token
-telegram_alerts_chats = [""]  # List of chat IDs to receive transaction images
-telegram_alerts_token = ""  # Token for the alerts bot
+telegram_bot_token = ""
+telegram_alerts_chats = [""]
+telegram_alerts_token = ""
 
-is_drop_all_tables = False  # Set to True to reset database on startup
+is_drop_all_tables = False
 
-# Google Sheet Configuration
-google_sheet_id = ""  # Your Google Sheet ID (from the link to a Sheet)
-google_sheet_viewer_link = "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID"
+GEOM_SEQ_R = 1.015 # 1.5%
+google_sheet_name = "Sheet1"
 
-# User Messages
-start_text = "Hello!\nHappy to see you here 😀\n\nPlease send a <strong>picture (screenshot/photo)</strong> that confirms your transaction.\n\nRecipient details:\n<pre>+7 111 111 11 11     </pre>"
+google_sheet_viewer_link = ""
+start_text = "Hello!\nHappy to see you here 😀\n\nYou are <strong>{}</strong> out of {}\n\nYour payment is <strong>{} RUB</strong>.\n\n\
+Recipient details:\n<pre></pre>\nX X\nX / X / X / X\n\n\
+Please send a <strong>screenshot (or picture/photo)</strong> that confirms your transaction.\n\n\
+Interesting stats:\nLowest payment: {} RUB\nHighest payment: {} RUB\nThe next guy will pay: {} RUB ({}% more)"
+
 wrong_message_text = "You can only send plain photos from the gallery (no files).\nPlease try one more time."
-alert_text = "User @{} attached:"
-success_text = "🥳Thank YOU!🎉\n\nCheck your username at <strong>row {}</strong> (should be green):\n\n" + google_sheet_viewer_link
-username_not_found_text = "Your username <strong>@{}</strong> is not in the google sheet:\n\n" + google_sheet_viewer_link
+alert_text = "#{} @{} {} RUB:"
+success_text = "🥳Thank YOU!🎉\n\nCheck your username at <strong>ROW: {}</strong> (should be green):\n\n" + google_sheet_viewer_link
+username_not_found_text = "Your username <strong>@{}</strong> is not in the Google Sheet:\n\n" + google_sheet_viewer_link
 
-# PostgreSQL Database Configuration
+
 pg_conf_keys = {
     'host': "db",
-    'dbname': "",  # Your database name
-    'user': "",    # Database username
-    'password': "", # Database password
+    'dbname': "",
+    'user': "",
+    'password': "",
     'port': "5432",
 }
+
+
+google_sheet_id = ""
 ```
 
 ## Running the Bot
 
 ### Run
+
 1. Make sure all configuration files are properly set up
 2. Run:
+
 ```bash
 docker compose up
 ```
 
 ### After Making Changes
+
 If you modify `bot.py` or other source files:
+
 ```bash
 docker build . -t tg_bot_collect_checks-bot
 docker compose up
