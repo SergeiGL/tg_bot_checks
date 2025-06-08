@@ -9,7 +9,7 @@ def _sync_get_sheets_service():
     """
     creds = Credentials.from_service_account_file("google_sheets_key.json", scopes=["https://www.googleapis.com/auth/spreadsheets"])
     service = build("sheets", "v4", credentials=creds)
-    return service.spreadsheets()
+    return service  # Return the main service
 
 
 async def get_sheets_service():
@@ -22,31 +22,54 @@ async def get_sheets_service():
     return sheets_api
 
 
-async def find_row_number(target: str, spreadsheet_id: str) -> int | None:
+async def get_row_and_color(target: str, spreadsheet_id: str) -> tuple[int | None, str | None]:
     """
     Asynchronously looks up `target` in column A of the given spreadsheet.
-    Returns the 1-based row number if found, or None otherwise.
-    Also colors the A:idx cell to green
+    Returns a tuple of (1-based row number, background color) if found, or None otherwise.
+    Also colors the A:idx cell to green when found.
     """
     # Get the sheets service (runs in executor)
     sheets_api = await get_sheets_service()
-
-    # Prepare the request object (non-blocking)
-    request = sheets_api.values().get(spreadsheetId=spreadsheet_id, range="A:A")
-
-    # Execute the request in a thread executor (blocking network I/O)
+    
+    # First, get the values from column A
+    values_request = sheets_api.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range="A:A")
+    
+    # Execute the values request in a thread executor (blocking network I/O)
     loop = asyncio.get_running_loop()
-    result = await loop.run_in_executor(None, request.execute)
-
-    values = result.get("values", [])  # values is a list of [cell_value] lists
-
+    values_result = await loop.run_in_executor(None, values_request.execute)
+    values = values_result.get("values", [])  # values is a list of [cell_value] lists
+    
+    # Find the target row
+    target_row = None
     for idx, row in enumerate(values, start=1):
         # Each row is a list; if the cell is empty, row may be an empty list
         cell_value = row[0].strip().replace("@", "") if len(row) > 0 else ""
         if cell_value == target:
-            return idx
+            target_row = idx
+            break
+    
+    if target_row is None:
+        return (None, None)
+    
+    # Get the current formatting to read the background color
+    cell_range = f"A{target_row}"
+    format_request = sheets_api.spreadsheets().get(
+        spreadsheetId=spreadsheet_id,
+        ranges=[cell_range],
+        includeGridData=True
+    )
+    
+    format_result = await loop.run_in_executor(None, format_request.execute)
+    
+    grid_data = format_result.get("sheets", [{}])[0].get("data", [{}])[0]
+    row_data = grid_data.get("rowData", [{}])
+    cell_data = row_data[0].get("values", [{}])[0]
+    
+    current_bg_color = None
+    if "effectiveFormat" in cell_data:
+        current_bg_color = cell_data["effectiveFormat"].get("backgroundColor", None)
 
-    return None
+    return (target_row, current_bg_color)
 
 async def color_row_and_insert_data(
     row_number: int,
@@ -64,13 +87,13 @@ async def color_row_and_insert_data(
     sheets_api = await get_sheets_service()
 
     # 2. First, update the values in B:D of the target row.
-    values_request = sheets_api.values().update(
+    values_request = sheets_api.spreadsheets().values().update(
         spreadsheetId=spreadsheet_id,
         range=f"{config.google_sheet_name}!B{row_number}:D{row_number}",
         valueInputOption="USER_ENTERED",
         body={
             "values": [
-                [f"# {count+1}", f"{sum_to_pay} RUB", f"{str(elapsed_interval).split(".", 1)[0]}"]
+                [f"# {count+1}", sum_to_pay, f"{str(elapsed_interval).split(".", 1)[0]}"]
             ]
         }
     )
@@ -105,7 +128,7 @@ async def color_row_and_insert_data(
         ]
     }
 
-    batch_update_request = sheets_api.batchUpdate(
+    batch_update_request = sheets_api.spreadsheets().batchUpdate(
         spreadsheetId=spreadsheet_id,
         body=format_request_body
     )
@@ -123,7 +146,7 @@ async def get_n_people_and_total_sum(spreadsheet_id: str):
     # Get the sheets service (runs in executor)
     sheets_api = await get_sheets_service()
 
-    request = sheets_api.values().get(
+    request = sheets_api.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
         range="F2:G2"
     )
@@ -154,8 +177,8 @@ async def get_n_people_and_total_sum(spreadsheet_id: str):
 if __name__ == "__main__":
     async def main():
         TARGET_VAL = "julibusygina"
-        row_num = await find_row_number(TARGET_VAL, config.google_sheet_id)
-        print(row_num)
+        data = await get_row_and_color(TARGET_VAL, config.google_sheet_id)
+        print(data)
 
 
     asyncio.run(main())

@@ -3,16 +3,17 @@
 ## How It Works
 
 1. Users start a chat (/start)
-    1. The username of a sender is in the Google Sheet
-        - Bot sends the payment sum (depends on how early the user started the bot) and prompts for a transaction confirmation screenshot
-    2. The username of a sender is NOT in the Google Sheet
-        - User is prompted that he is not in the Google Sheet
+   1. The username of a sender is in the Google Sheet and not in green
+      - Bot sends the payment sum (depends on how early the user started the bot) and prompts for a transaction confirmation screenshot
+   2. The username of a sender is NOT in the Google Sheet
+      - User is prompted that he is not in the Google Sheet
+   3. User is green in the google sheet
+      - User is prompted to relax
 2. When any image is received:
    1. The username of a sender is in the Google Sheet
-      - Image is forwarded to the specified admin account with user's position, payment sum and username
-      - Image is saved at a PostgreSQL database (see `example_db.png`)
-      - The user's name is highlighted green in the Google Sheet
-      - User receives a confirmation message and a view-only link to the Google Sheet (with his row number) to check that his username is indeed turned green.
+      - User is not green: - Image is forwarded to the specified admin account with user's position, payment sum and username - Image is saved at a PostgreSQL database (see `example_db.png`) - The user's name is highlighted green in the Google Sheet - User receives a confirmation message and a view-only link to the Google Sheet (with his row number) to check that his username is indeed turned green.
+      - User is in green:
+        - User is prompted to relax
    2. The username of a sender is NOT in the Google Sheet
       - User is prompted that he is not in the Google Sheet
 
@@ -21,6 +22,7 @@
 - Telegram bot
 - A Google Sheet with Telegram usernames in column A (the column will be color-coded)
 - Google Cloud account with API access to the Sheet configured
+- Telegram group with bot added to it as admin
 - Docker and Docker Compose installed
 
 ## Setup Instructions
@@ -38,6 +40,7 @@
 Create a `config.py` file with the following content:
 
 ```python
+admin_chat_id = "@XXXXXXX"
 telegram_bot_token = ""
 telegram_alerts_chats = [""]
 telegram_alerts_token = ""
@@ -49,15 +52,17 @@ google_sheet_name = "Sheet1"
 
 google_sheet_viewer_link = ""
 start_text = "Hello!\nHappy to see you here 😀\n\nYou are <strong>{}</strong> out of {}\n\nYour payment is <strong>{} RUB</strong>.\n\n\
-Recipient details:\n<pre></pre>\nX X\nX / X / X / X\n\n\
+Recipient details:\n<pre>+1 XXX XX XX </pre>\nJake Daniels\nThe bank of America\n\n\
 Please send a <strong>screenshot (or picture/photo)</strong> that confirms your transaction.\n\n\
-Interesting stats:\nLowest payment: {} RUB\nHighest payment: {} RUB\nThe next guy will pay: {} RUB ({}% more)"
+Interesting payment stats:\nLowest: {} RUB\nYour: {} RUB\nHighest: {} RUB\nThe next guy's: {} RUB ({}% more)"
 
 wrong_message_text = "You can only send plain photos from the gallery (no files).\nPlease try one more time."
 alert_text = "#{} @{} {} RUB:"
-success_text = "🥳Thank YOU!🎉\n\nCheck your username at <strong>ROW: {}</strong> (should be green):\n\n" + google_sheet_viewer_link
+success_text = "🥳Thank YOU!🎉\n\nYour unique link (only 1 person can use it, after this it is invalid) to the chat:\n\n{}\n\nAlso check your username at <strong>ROW: #{}</strong> (should be green):\n\n" + google_sheet_viewer_link
+already_done_text = "You are already green in the table.\nTime to relax 😀\nIf you attached the wrong screenshot contact " + admin_chat_id
 username_not_found_text = "Your username <strong>@{}</strong> is not in the Google Sheet:\n\n" + google_sheet_viewer_link
 
+group_chat_id="-XXXXXXXXXXXX"
 
 pg_conf_keys = {
     'host': "db",
