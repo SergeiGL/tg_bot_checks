@@ -2,9 +2,8 @@ services:
   db:
     image: postgres:latest
     restart: always
-    shm_size: 128mb
+    shm_size: 256mb
     environment:
-      # Create a database named checks_ICEF
       POSTGRES_DB: checks_ICEF
       POSTGRES_USER: sergei
       POSTGRES_PASSWORD: XXXXX

@@ -45,8 +45,6 @@ telegram_bot_token = ""
 telegram_alerts_chats = [""]
 telegram_alerts_token = ""
 
-is_drop_all_tables = False
-
 GEOM_SEQ_R = 1.015 # 1.5%
 google_sheet_name = "Sheet1"
 
@@ -54,7 +52,7 @@ google_sheet_viewer_link = ""
 start_text = "Hello!\nHappy to see you here 😀\n\nYou are <strong>{}</strong> out of {}\n\nYour payment is <strong>{} RUB</strong>.\n\n\
 Recipient details:\n<pre>+1 XXX XX XX </pre>\nJake Daniels\nThe bank of America\n\n\
 Please send a <strong>screenshot (or picture/photo)</strong> that confirms your transaction.\n\n\
-Interesting payment stats:\nLowest: {} RUB\nYour: {} RUB\nHighest: {} RUB\nThe next guy's: {} RUB ({}% more)"
+Interesting payment stats:\nYour: {} RUB\nAverage (if everyone paid equally): {} RUB\nThe next guy's: {} RUB ({}% more)"
 
 wrong_message_text = "You can only send plain photos from the gallery (no files).\nPlease try one more time."
 alert_text = "#{} @{} {} RUB:"
@@ -62,7 +60,6 @@ success_text = "🥳Thank YOU!🎉\n\nYour unique link (only 1 person can use it
 already_done_text = "You are already green in the table.\nTime to relax 😀\nIf you attached the wrong screenshot contact " + admin_chat_id
 username_not_found_text = "Your username <strong>@{}</strong> is not in the Google Sheet:\n\n" + google_sheet_viewer_link
 
-group_chat_id="-XXXXXXXXXXXX"
 
 pg_conf_keys = {
     'host': "db",
@@ -72,7 +69,8 @@ pg_conf_keys = {
     'port': "5432",
 }
 
-
+TTL = 30  # =30 seconds
+group_chat_id="-XXXXXXXXXXXX"
 google_sheet_id = ""
 ```
 
